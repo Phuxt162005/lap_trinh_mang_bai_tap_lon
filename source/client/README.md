@@ -1,36 +1,74 @@
 # MODULE CLIENT
 
-> 📘 *Sinh viên mô tả phần server tại đây. Lưu ý điền đầy đủ và giữ nguyên cấu trúc các phần. Ví dụ là minh họa, tùy thuộc vào chủ đề và stack lựa chọn sẽ có sự khác biệt*
+> 📘 *Sinh viên mô tả phần **client** tại đây. Điền đầy đủ theo framework và bài toán của nhóm.*
 
-## 🎯 Mục tiêu
-Client chịu trách nhiệm gửi yêu cầu đến server, hiển thị kết quả và hỗ trợ người dùng thao tác.
+---
 
-## ⚙️ Công nghệ
+## 🎯 MỤC TIÊU
+
+Client chịu trách nhiệm:
+- Gửi yêu cầu đến server
+- Hiển thị kết quả cho người dùng
+- Cung cấp giao diện tương tác
+
+---
+
+## ⚙️ CÔNG NGHỆ SỬ DỤNG
+
 | Thành phần | Công nghệ |
-|-------------|------------|
-| Ngôn ngữ | Node.js / Python / Java |
-| Thư viện chính | Axios / Requests / Socket.io (tuỳ chọn) |
+|------------|-----------|
+| Ngôn ngữ | Node.js / Python / Java / ... |
+| Thư viện chính | Axios / Requests / ... |
+| Giao thức | HTTP / WebSocket / ... |
 
-## 🚀 Hướng dẫn chạy
-1. Cài dependency:
-   ```bash
-   npm install
-   ```
-2. Chạy chương trình client:
-   ```bash
-   node main.js
-   ```
+---
 
-## 📦 Cấu trúc
+## 🚀 HƯỚNG DẪN CHẠY
+
+### Cài đặt
+```bash
+# Ví dụ với Node.js
+npm install
+
+# Hoặc với Python
+pip install -r requirements.txt
+```
+
+### Chạy chương trình
+```bash
+# Ví dụ
+node main.js
+# hoặc
+python client.py
+```
+
+### Cấu hình (nếu cần)
+- Server URL: `http://localhost:8080`
+- Có thể thay đổi trong file `config.js` hoặc `.env`
+
+---
+
+## 📦 CẤU TRÚC
 ```
 client/
-├─ README.md
-├─ package.json
-├─ main.js
-└─ lib/
-   └─ helper.js
+├── README.md
+├── main.js (hoặc client.py)
+├── config.js
+└── lib/
+    └── helper.js
 ```
 
-## 🧱 Ghi chú
-- Port server mặc định: 8080  
-- Có thể thay đổi endpoint trong `config.js`
+---
+
+## 💡 SỬ DỤNG
+```bash
+# Ví dụ gửi request
+node main.js --input "data"
+```
+
+---
+
+## 📝 GHI CHÚ
+
+- Đảm bảo server đã chạy trước khi khởi động client
+- Mặc định kết nối đến `localhost:8080`
