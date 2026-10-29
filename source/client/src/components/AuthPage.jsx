@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { apiRequest } from "../services/api";
 
 export default function AuthPage({ onLogin }) {
   const [mode, setMode] = useState("login");
@@ -6,38 +7,70 @@ export default function AuthPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
-    setError("");
+    setMessage("");
 
-    if (!email.trim() || !password) {
-      setError("Vui lòng nhập email và mật khẩu.");
-      return;
-    }
+    const cleanEmail = email.trim().toLowerCase();
 
     if (mode === "register") {
       if (!name.trim()) {
-        setError("Vui lòng nhập họ tên.");
+        setIsError(true);
+        setMessage("Vui lòng nhập họ tên.");
         return;
       }
       if (password.length < 8) {
-        setError("Mật khẩu phải có ít nhất 8 ký tự.");
+        setIsError(true);
+        setMessage("Mật khẩu phải có ít nhất 8 ký tự.");
         return;
       }
       if (password !== confirmPassword) {
-        setError("Mật khẩu nhập lại không khớp.");
+        setIsError(true);
+        setMessage("Mật khẩu nhập lại không khớp.");
         return;
       }
-
-      setError(
-        "Giao diện đã kiểm tra dữ liệu. Chức năng đăng ký sẽ được kết nối với backend sau.",
-      );
-      return;
     }
 
-    onLogin({ name: email.split("@")[0], email });
+    setLoading(true);
+    setIsError(false);
+
+    try {
+      if (mode === "register") {
+        await apiRequest("/auth/register", {
+          method: "POST",
+          body: { name: name.trim(), email: cleanEmail, password },
+        });
+
+        setMode("login");
+        setPassword("");
+        setConfirmPassword("");
+        setMessage("Đăng ký thành công! Hãy đăng nhập bằng tài khoản vừa tạo.");
+      } else {
+        const data = await apiRequest("/auth/login", {
+          method: "POST",
+          body: { email: cleanEmail, password },
+        });
+
+        onLogin({ ...data.user, token: data.token });
+      }
+    } catch (error) {
+      setIsError(true);
+      setMessage(error.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function toggleMode() {
+    setMode(mode === "login" ? "register" : "login");
+    setMessage("");
+    setIsError(false);
+    setPassword("");
+    setConfirmPassword("");
   }
 
   return (
@@ -64,6 +97,7 @@ export default function AuthPage({ onLogin }) {
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nhập họ và tên"
                 autoComplete="name"
+                required
               />
             </label>
           )}
@@ -108,32 +142,34 @@ export default function AuthPage({ onLogin }) {
             </label>
           )}
 
-          {error && (
-            <p className="auth-message" role="status">
-              {error}
+          {message && (
+            <p
+              className="auth-message"
+              role="status"
+              style={{ color: isError ? "#dc2626" : "#16a34a" }}
+            >
+              {message}
             </p>
           )}
 
-          <button type="submit" className="auth-submit">
-            {mode === "login" ? "Đăng nhập" : "Đăng ký"}
+          <button type="submit" className="auth-submit" disabled={loading}>
+            {loading
+              ? "Đang xử lý..."
+              : mode === "login"
+                ? "Đăng nhập"
+                : "Đăng ký"}
           </button>
         </form>
 
         <p className="auth-switch">
           {mode === "login" ? "Chưa có tài khoản?" : "Đã có tài khoản?"}
-          <button
-            type="button"
-            onClick={() => {
-              setMode(mode === "login" ? "register" : "login");
-              setError("");
-            }}
-          >
+          <button type="button" onClick={toggleMode} disabled={loading}>
             {mode === "login" ? "Đăng ký ngay" : "Đăng nhập"}
           </button>
         </p>
 
         <p className="auth-disclaimer">
-          Phiên bản giao diện thử nghiệm — chưa kết nối máy chủ.
+          Tài khoản được xác thực qua máy chủ Music App.
         </p>
       </section>
     </main>
