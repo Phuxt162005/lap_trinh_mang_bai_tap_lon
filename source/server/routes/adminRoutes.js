@@ -415,6 +415,12 @@ router.patch("/users/:id/role", async (req, res, next) => {
       return res.status(400).json({ message: "Vai trò không hợp lệ." });
     }
 
+    if (Number(id) === Number(req.user.id) && role !== "admin") {
+      return res.status(409).json({
+        message: "Không thể tự hạ quyền tài khoản đang đăng nhập.",
+      });
+    }
+
     connection = await pool.getConnection();
     await connection.beginTransaction();
 
