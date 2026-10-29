@@ -224,14 +224,6 @@ export default function HomePage({ searchText = "", onPlaySong }) {
         </>
       ) : (
         <>
-          <div className="home-intro">
-            <span className="eyebrow">MUSIC DISCOVERY</span>
-            <h2>Âm nhạc dành riêng cho bạn</h2>
-            <p>
-              Khám phá những bài hát, nghệ sĩ và album trong thư viện của bạn.
-            </p>
-          </div>
-
           <div className="section-heading home-section-heading">
             <div>
               <h3>Bài hát mới trong thư viện</h3>
