@@ -28,6 +28,12 @@ export default function App() {
   const [activePage, setActivePage] = useState("home");
   const [searchText, setSearchText] = useState("");
   const [checkingSession, setCheckingSession] = useState(true);
+  const [queue, setQueue] = useState([]);
+  const [currentIndex, setCurrentIndex] = useState(-1);
+
+  const currentSong = currentIndex >= 0 ? queue[currentIndex] : null;
+  const hasPrevious = currentIndex > 0;
+  const hasNext = currentIndex >= 0 && currentIndex < queue.length - 1;
 
   useEffect(() => {
     let cancelled = false;
@@ -52,7 +58,6 @@ export default function App() {
     }
 
     restoreSession();
-
     return () => {
       cancelled = true;
     };
@@ -75,10 +80,36 @@ export default function App() {
     setUser(null);
     setActivePage("home");
     setSearchText("");
+    setQueue([]);
+    setCurrentIndex(-1);
+  }
+
+  function playSong(song, songs = []) {
+    const list = Array.isArray(songs) && songs.length ? songs : [song];
+    let index = list.findIndex((item) => String(item.id) === String(song.id));
+
+    if (index < 0) {
+      setQueue([song]);
+      setCurrentIndex(0);
+      return;
+    }
+
+    setQueue(list);
+    setCurrentIndex(index);
+  }
+
+  function playNext() {
+    setCurrentIndex((index) =>
+      index >= 0 && index < queue.length - 1 ? index + 1 : index,
+    );
+  }
+
+  function playPrevious() {
+    setCurrentIndex((index) => (index > 0 ? index - 1 : index));
   }
 
   function renderPage() {
-    const pageProps = { searchText };
+    const pageProps = { searchText, onPlaySong: playSong };
 
     switch (activePage) {
       case "songs":
@@ -123,12 +154,17 @@ export default function App() {
               âm nhạc của bạn.
             </p>
           </section>
-
           {renderPage()}
         </main>
       </div>
 
-      <MusicPlayer />
+      <MusicPlayer
+        currentSong={currentSong}
+        onNext={playNext}
+        onPrevious={playPrevious}
+        hasNext={hasNext}
+        hasPrevious={hasPrevious}
+      />
     </div>
   );
 }

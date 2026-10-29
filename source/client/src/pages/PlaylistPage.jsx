@@ -6,7 +6,7 @@ function formatDuration(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export default function PlaylistsPage({ searchText = "" }) {
+export default function PlaylistsPage({ searchText = "", onPlaySong }) {
   const [playlists, setPlaylists] = useState([]);
   const [songs, setSongs] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -348,15 +348,25 @@ export default function PlaylistsPage({ searchText = "" }) {
                 ) : (
                   playlistSongs.map((song) => (
                     <div className="playlist-song-row" key={song.id}>
-                      <span className="song-cover song-cover-placeholder">
-                        ♫
-                      </span>
-                      <div className="playlist-song-info">
+                      <button
+                        type="button"
+                        className="song-cover song-cover-placeholder playlist-play-cover"
+                        onClick={() => onPlaySong?.(song, playlistSongs)}
+                        title={`Phát ${song.title}`}
+                        aria-label={`Phát ${song.title}`}
+                      >
+                        ▶
+                      </button>
+                      <button
+                        type="button"
+                        className="playlist-song-info playlist-song-play"
+                        onClick={() => onPlaySong?.(song, playlistSongs)}
+                      >
                         <strong>{song.title}</strong>
                         <span>
                           {song.artist} · {song.album || "Chưa có album"}
                         </span>
-                      </div>
+                      </button>
                       <span className="playlist-song-duration">
                         {formatDuration(song.duration_seconds)}
                       </span>

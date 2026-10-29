@@ -6,7 +6,7 @@ function formatDuration(seconds) {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
-export default function SongsPage({ searchText = "" }) {
+export default function SongsPage({ searchText = "", onPlaySong }) {
   const [songs, setSongs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,18 +17,14 @@ export default function SongsPage({ searchText = "" }) {
     async function loadSongs() {
       setLoading(true);
       setError("");
-
       try {
-        const query = searchText.trim();
-        const path = query ? `/songs?q=${encodeURIComponent(query)}` : "/songs";
-
+        const q = searchText.trim();
+        const path = q ? `/songs?q=${encodeURIComponent(q)}` : "/songs";
         const data = await apiRequest(path);
-
         if (!cancelled) setSongs(data.songs || []);
       } catch (err) {
-        if (!cancelled) {
+        if (!cancelled)
           setError(err.message || "Không thể tải danh sách bài hát.");
-        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -45,11 +41,7 @@ export default function SongsPage({ searchText = "" }) {
       <div className="section-heading">
         <div>
           <h3>{searchText.trim() ? "Kết quả tìm kiếm" : "Tất cả bài hát"}</h3>
-          <p>
-            {loading
-              ? "Đang tải dữ liệu..."
-              : `${songs.length} bài hát${searchText.trim() ? ` phù hợp với "${searchText.trim()}"` : ""}`}
-          </p>
+          <p>{loading ? "Đang tải dữ liệu..." : `${songs.length} bài hát`}</p>
         </div>
       </div>
 
@@ -85,6 +77,7 @@ export default function SongsPage({ searchText = "" }) {
                 <th>Nghệ sĩ</th>
                 <th>Album</th>
                 <th>Thời lượng</th>
+                <th>Phát</th>
               </tr>
             </thead>
             <tbody>
@@ -110,6 +103,17 @@ export default function SongsPage({ searchText = "" }) {
                   <td>{song.artist}</td>
                   <td>{song.album || "Chưa có album"}</td>
                   <td>{formatDuration(song.duration_seconds)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="song-play-action"
+                      onClick={() => onPlaySong?.(song, songs)}
+                      title={`Phát ${song.title}`}
+                      aria-label={`Phát ${song.title}`}
+                    >
+                      ▶ Phát
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
