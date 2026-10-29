@@ -1,7 +1,7 @@
 import { useState } from "react";
-import Sidebar from "./components/Sidebar";
-import Header from "./components/Header";
-import MusicPlayer from "./components/MusicPlayer";
+import Sidebar from "./components/layout/Sidebar";
+import Header from "./components/layout/Header";
+import MusicPlayer from "./components/layout/MusicPlayer";
 
 const pageTitles = {
   home: "Trang chủ",

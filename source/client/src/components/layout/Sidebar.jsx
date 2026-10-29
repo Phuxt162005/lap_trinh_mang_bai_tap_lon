@@ -16,14 +16,19 @@ export default function Sidebar({ activePage, onNavigate }) {
 
       <div className="sidebar-section">
         <p className="section-label">THƯ VIỆN</p>
-        <nav className="navigation">
+
+        <nav className="navigation" aria-label="Điều hướng chính">
           {menus.map((menu) => (
             <button
               key={menu.id}
+              type="button"
               className={`nav-item ${activePage === menu.id ? "active" : ""}`}
+              aria-current={activePage === menu.id ? "page" : undefined}
               onClick={() => onNavigate(menu.id)}
             >
-              <span className="nav-icon">{menu.icon}</span>
+              <span className="nav-icon" aria-hidden="true">
+                {menu.icon}
+              </span>
               <span>{menu.label}</span>
             </button>
           ))}
