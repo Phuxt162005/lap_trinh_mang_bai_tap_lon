@@ -371,4 +371,167 @@ router.delete("/albums/:id", async (req, res, next) => {
   }
 });
 
+/* ===== QUẢN LÝ NGƯỜI DÙNG ===== */
+
+// Lấy danh sách tài khoản và tìm kiếm theo tên/email.
+router.get("/users", async (req, res, next) => {
+  try {
+    const q = String(req.query.q || "").trim();
+    const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 200);
+    const params = [];
+    let sql = `
+      SELECT id, name, email, role, created_at
+      FROM users
+    `;
+
+    if (q) {
+      sql += " WHERE name LIKE ? OR email LIKE ?";
+      params.push(`%${q}%`, `%${q}%`);
+    }
+
+    sql += " ORDER BY created_at DESC, id DESC LIMIT ?";
+    params.push(limit);
+
+    const [users] = await pool.execute(sql, params);
+    res.json({ users });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Thay đổi vai trò user/admin.
+router.patch("/users/:id/role", async (req, res, next) => {
+  let connection;
+
+  try {
+    const id = validId(req.params.id);
+    const role = text(req.body.role);
+
+    if (!id) {
+      return res.status(400).json({ message: "ID tài khoản không hợp lệ." });
+    }
+
+    if (!["user", "admin"].includes(role)) {
+      return res.status(400).json({ message: "Vai trò không hợp lệ." });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [rows] = await connection.execute(
+      "SELECT id, role FROM users WHERE id = ? FOR UPDATE",
+      [id],
+    );
+
+    if (!rows.length) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Không tìm thấy tài khoản." });
+    }
+
+    const target = rows[0];
+
+    if (target.role === "admin" && role === "user") {
+      const [admins] = await connection.execute(
+        "SELECT id FROM users WHERE role = 'admin' FOR UPDATE",
+      );
+
+      if (admins.length <= 1) {
+        await connection.rollback();
+        return res.status(409).json({
+          message: "Không thể hạ quyền admin cuối cùng.",
+        });
+      }
+    }
+
+    await connection.execute("UPDATE users SET role = ? WHERE id = ?", [
+      role,
+      id,
+    ]);
+
+    await connection.commit();
+    res.json({ message: "Đã cập nhật vai trò tài khoản.", id, role });
+  } catch (error) {
+    if (connection) await connection.rollback();
+    next(error);
+  } finally {
+    connection?.release();
+  }
+});
+
+// Xóa tài khoản và playlist thuộc tài khoản đó.
+router.delete("/users/:id", async (req, res, next) => {
+  let connection;
+
+  try {
+    const id = validId(req.params.id);
+
+    if (!id) {
+      return res.status(400).json({ message: "ID tài khoản không hợp lệ." });
+    }
+
+    // Không cho admin xóa chính tài khoản đang đăng nhập.
+    if (Number(id) === Number(req.user.id)) {
+      return res.status(409).json({
+        message: "Không thể tự xóa tài khoản đang đăng nhập.",
+      });
+    }
+
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    const [rows] = await connection.execute(
+      "SELECT id, role FROM users WHERE id = ? FOR UPDATE",
+      [id],
+    );
+
+    if (!rows.length) {
+      await connection.rollback();
+      return res.status(404).json({ message: "Không tìm thấy tài khoản." });
+    }
+
+    if (rows[0].role === "admin") {
+      const [admins] = await connection.execute(
+        "SELECT id FROM users WHERE role = 'admin' FOR UPDATE",
+      );
+
+      if (admins.length <= 1) {
+        await connection.rollback();
+        return res.status(409).json({
+          message: "Không thể xóa admin cuối cùng.",
+        });
+      }
+    }
+
+    // Xóa các bản ghi liên kết trước khi xóa playlist.
+    await connection.execute(
+      `DELETE ps FROM playlist_songs ps
+       INNER JOIN playlists p ON p.id = ps.playlist_id
+       WHERE p.user_id = ?`,
+      [id],
+    );
+
+    await connection.execute("DELETE FROM playlists WHERE user_id = ?", [id]);
+    await connection.execute("DELETE FROM users WHERE id = ?", [id]);
+
+    await connection.commit();
+    res.json({ message: "Đã xóa tài khoản và các playlist của tài khoản." });
+  } catch (error) {
+    if (connection) await connection.rollback();
+
+    if (
+      error.code === "ER_ROW_IS_REFERENCED_2" ||
+      error.code === "ER_ROW_IS_REFERENCED"
+    ) {
+      return res.status(409).json({
+        message:
+          "Không thể xóa tài khoản vì dữ liệu liên quan vẫn đang được sử dụng.",
+      });
+    }
+
+    next(error);
+  } finally {
+    connection?.release();
+  }
+});
+
 export default router;

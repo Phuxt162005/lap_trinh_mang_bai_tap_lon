@@ -46,6 +46,176 @@ const definitions = {
   },
 };
 
+function UsersManagementPanel() {
+  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await apiRequest("/admin/users");
+      setUsers(data.users || []);
+    } catch (err) {
+      setError(err.message || "Không thể tải danh sách tài khoản.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const visibleUsers = users.filter((user) => {
+    const q = search.trim().toLowerCase();
+    return (
+      !q ||
+      user.name.toLowerCase().includes(q) ||
+      user.email.toLowerCase().includes(q)
+    );
+  });
+
+  async function changeRole(user, role) {
+    if (user.role === role) return;
+
+    const confirmed = window.confirm(
+      `Đổi vai trò của ${user.email} thành "${role}"?`,
+    );
+    if (!confirmed) return;
+
+    setBusyId(user.id);
+    setError("");
+    setNotice("");
+
+    try {
+      await apiRequest(`/admin/users/${user.id}/role`, {
+        method: "PATCH",
+        body: { role },
+      });
+      setNotice(`Đã cập nhật vai trò của ${user.email}.`);
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Không thể cập nhật vai trò.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function deleteUser(user) {
+    if (
+      !window.confirm(
+        `Bạn có chắc muốn xóa tài khoản "${user.email}"? Các playlist của tài khoản này cũng sẽ bị xóa.`,
+      )
+    )
+      return;
+
+    setBusyId(user.id);
+    setError("");
+    setNotice("");
+
+    try {
+      const data = await apiRequest(`/admin/users/${user.id}`, {
+        method: "DELETE",
+      });
+      setNotice(data.message || "Đã xóa tài khoản.");
+      await loadUsers();
+    } catch (err) {
+      setError(err.message || "Không thể xóa tài khoản.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  return (
+    <section className="admin-panel users-admin-panel">
+      <div className="admin-list-heading">
+        <div>
+          <h3>Quản lý người dùng</h3>
+          <p>{visibleUsers.length} tài khoản</p>
+        </div>
+        <button
+          className="admin-secondary-button"
+          type="button"
+          onClick={loadUsers}
+          disabled={loading}
+        >
+          Làm mới
+        </button>
+      </div>
+
+      <label className="admin-field">
+        <span>Tìm theo tên hoặc email</span>
+        <input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Nhập tên hoặc email..."
+        />
+      </label>
+
+      {error && (
+        <div className="admin-message error" role="alert">
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div className="admin-message success" role="status">
+          {notice}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="admin-empty">Đang tải tài khoản...</div>
+      ) : visibleUsers.length === 0 ? (
+        <div className="admin-empty">Không tìm thấy tài khoản.</div>
+      ) : (
+        <div className="admin-record-list">
+          {visibleUsers.map((user) => (
+            <article className="admin-record" key={user.id}>
+              <div className="admin-record-info">
+                <strong>{user.name}</strong>
+                <span>{user.email}</span>
+                <small>
+                  ID: {user.id} · Tạo lúc:{" "}
+                  {user.created_at
+                    ? new Date(user.created_at).toLocaleString("vi-VN")
+                    : "Không rõ"}
+                </small>
+              </div>
+
+              <div className="admin-record-actions">
+                <select
+                  aria-label={`Vai trò của ${user.email}`}
+                  value={user.role}
+                  disabled={busyId === user.id}
+                  onChange={(event) => changeRole(user, event.target.value)}
+                >
+                  <option value="user">Người dùng</option>
+                  <option value="admin">Quản trị viên</option>
+                </select>
+                <button
+                  type="button"
+                  className="playlist-danger-button"
+                  disabled={busyId === user.id}
+                  onClick={() => deleteUser(user)}
+                >
+                  {busyId === user.id ? "Đang xử lý..." : "Xóa"}
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 const emptyForm = (fields) =>
   Object.fromEntries(fields.map((field) => [field.name, ""]));
 
@@ -60,7 +230,7 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
-  const config = definitions[tab];
+  const config = definitions[tab] || definitions.songs;
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -80,6 +250,7 @@ export default function AdminPage() {
   }, [config.endpoint, config.listKey, tab]);
 
   useEffect(() => {
+    if (tab === "users") return;
     setForm(emptyForm(definitions[tab].fields));
     setEditingId(null);
     setNotice("");
@@ -189,6 +360,16 @@ export default function AdminPage() {
             {value.label}
           </button>
         ))}
+
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "users"}
+          className={`admin-tab ${tab === "users" ? "active" : ""}`}
+          onClick={() => setTab("users")}
+        >
+          Người dùng
+        </button>
       </div>
 
       {notice && (
@@ -202,137 +383,141 @@ export default function AdminPage() {
         </div>
       )}
 
-      <div className="admin-layout">
-        <section className="admin-panel">
-          <h3>
-            {editingId
-              ? `Sửa ${config.label.toLowerCase()}`
-              : `Thêm ${config.label.toLowerCase()}`}
-          </h3>
-          <form className="admin-form" onSubmit={handleSubmit}>
-            {config.fields.map((field) => (
-              <label className="admin-field" key={field.name}>
-                <span>
-                  {field.label}
-                  {field.required ? " *" : ""}
-                </span>
-                {field.type === "artist" ? (
-                  <select
-                    required={field.required}
-                    value={form[field.name] || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [field.name]: e.target.value })
-                    }
-                  >
-                    <option value="">-- Chọn nghệ sĩ --</option>
-                    {artists.map((artist) => (
-                      <option key={artist.id} value={artist.id}>
-                        {artist.name}
-                      </option>
-                    ))}
-                  </select>
-                ) : field.type === "textarea" ? (
-                  <textarea
-                    rows={4}
-                    maxLength={5000}
-                    value={form[field.name] || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [field.name]: e.target.value })
-                    }
-                  />
-                ) : (
-                  <input
-                    type={field.type || "text"}
-                    required={field.required}
-                    min={
-                      field.name === "duration_seconds"
-                        ? 0
-                        : field.name === "release_year"
-                          ? 1900
-                          : undefined
-                    }
-                    max={field.name === "release_year" ? 2100 : undefined}
-                    value={form[field.name] || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, [field.name]: e.target.value })
-                    }
-                  />
-                )}
-              </label>
-            ))}
-            <div className="admin-form-actions">
-              <button
-                className="playlist-primary-button"
-                type="submit"
-                disabled={saving}
-              >
-                {saving
-                  ? "Đang lưu..."
-                  : editingId
-                    ? "Lưu thay đổi"
-                    : "Thêm mới"}
-              </button>
-              {editingId && (
-                <button
-                  className="admin-secondary-button"
-                  type="button"
-                  onClick={cancelEdit}
-                >
-                  Hủy sửa
-                </button>
-              )}
-            </div>
-          </form>
-        </section>
-
-        <section className="admin-panel">
-          <div className="admin-list-heading">
-            <h3>Danh sách {config.label.toLowerCase()}</h3>
-            <button
-              className="admin-secondary-button"
-              type="button"
-              onClick={loadData}
-              disabled={loading}
-            >
-              Làm mới
-            </button>
-          </div>
-
-          {loading ? (
-            <div className="admin-empty">Đang tải dữ liệu...</div>
-          ) : items.length === 0 ? (
-            <div className="admin-empty">Chưa có dữ liệu.</div>
-          ) : (
-            <div className="admin-record-list">
-              {items.map((item) => (
-                <article className="admin-record" key={item.id}>
-                  <div className="admin-record-info">
-                    <strong>{config.title(item)}</strong>
-                    <span>{config.subtitle(item)}</span>
-                    <small>ID: {item.id}</small>
-                  </div>
-                  <div className="admin-record-actions">
-                    <button
-                      type="button"
-                      className="admin-edit-button"
-                      onClick={() => startEdit(item)}
+      {tab === "users" ? (
+        <UsersManagementPanel />
+      ) : (
+        <div className="admin-layout">
+          <section className="admin-panel">
+            <h3>
+              {editingId
+                ? `Sửa ${config.label.toLowerCase()}`
+                : `Thêm ${config.label.toLowerCase()}`}
+            </h3>
+            <form className="admin-form" onSubmit={handleSubmit}>
+              {config.fields.map((field) => (
+                <label className="admin-field" key={field.name}>
+                  <span>
+                    {field.label}
+                    {field.required ? " *" : ""}
+                  </span>
+                  {field.type === "artist" ? (
+                    <select
+                      required={field.required}
+                      value={form[field.name] || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, [field.name]: e.target.value })
+                      }
                     >
-                      Sửa
-                    </button>
-                    <button
-                      type="button"
-                      className="playlist-danger-button"
-                      onClick={() => handleDelete(item)}
-                    >
-                      Xóa
-                    </button>
-                  </div>
-                </article>
+                      <option value="">-- Chọn nghệ sĩ --</option>
+                      {artists.map((artist) => (
+                        <option key={artist.id} value={artist.id}>
+                          {artist.name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : field.type === "textarea" ? (
+                    <textarea
+                      rows={4}
+                      maxLength={5000}
+                      value={form[field.name] || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, [field.name]: e.target.value })
+                      }
+                    />
+                  ) : (
+                    <input
+                      type={field.type || "text"}
+                      required={field.required}
+                      min={
+                        field.name === "duration_seconds"
+                          ? 0
+                          : field.name === "release_year"
+                            ? 1900
+                            : undefined
+                      }
+                      max={field.name === "release_year" ? 2100 : undefined}
+                      value={form[field.name] || ""}
+                      onChange={(e) =>
+                        setForm({ ...form, [field.name]: e.target.value })
+                      }
+                    />
+                  )}
+                </label>
               ))}
+              <div className="admin-form-actions">
+                <button
+                  className="playlist-primary-button"
+                  type="submit"
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Đang lưu..."
+                    : editingId
+                      ? "Lưu thay đổi"
+                      : "Thêm mới"}
+                </button>
+                {editingId && (
+                  <button
+                    className="admin-secondary-button"
+                    type="button"
+                    onClick={cancelEdit}
+                  >
+                    Hủy sửa
+                  </button>
+                )}
+              </div>
+            </form>
+          </section>
+
+          <section className="admin-panel">
+            <div className="admin-list-heading">
+              <h3>Danh sách {config.label.toLowerCase()}</h3>
+              <button
+                className="admin-secondary-button"
+                type="button"
+                onClick={loadData}
+                disabled={loading}
+              >
+                Làm mới
+              </button>
             </div>
-          )}
-        </section>
-      </div>
+
+            {loading ? (
+              <div className="admin-empty">Đang tải dữ liệu...</div>
+            ) : items.length === 0 ? (
+              <div className="admin-empty">Chưa có dữ liệu.</div>
+            ) : (
+              <div className="admin-record-list">
+                {items.map((item) => (
+                  <article className="admin-record" key={item.id}>
+                    <div className="admin-record-info">
+                      <strong>{config.title(item)}</strong>
+                      <span>{config.subtitle(item)}</span>
+                      <small>ID: {item.id}</small>
+                    </div>
+                    <div className="admin-record-actions">
+                      <button
+                        type="button"
+                        className="admin-edit-button"
+                        onClick={() => startEdit(item)}
+                      >
+                        Sửa
+                      </button>
+                      <button
+                        type="button"
+                        className="playlist-danger-button"
+                        onClick={() => handleDelete(item)}
+                      >
+                        Xóa
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
     </section>
   );
 }
