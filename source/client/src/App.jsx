@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AuthPage from "./components/AuthPage";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
@@ -8,6 +8,12 @@ import SongsPage from "./pages/SongsPage";
 import ArtistsPage from "./pages/ArtistsPage";
 import AlbumsPage from "./pages/AlbumsPage";
 import PlaylistsPage from "./pages/PlaylistPage";
+import {
+  apiRequest,
+  getAuthToken,
+  setAuthToken,
+  clearAuthToken,
+} from "./services/api";
 
 const pageTitles = {
   home: "Trang chủ",
@@ -21,14 +27,51 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [activePage, setActivePage] = useState("home");
   const [searchText, setSearchText] = useState("");
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function restoreSession() {
+      const token = getAuthToken();
+
+      if (!token) {
+        if (!cancelled) setCheckingSession(false);
+        return;
+      }
+
+      try {
+        const data = await apiRequest("/auth/me");
+        if (!cancelled) setUser(data.user);
+      } catch {
+        clearAuthToken();
+        if (!cancelled) setUser(null);
+      } finally {
+        if (!cancelled) setCheckingSession(false);
+      }
+    }
+
+    restoreSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function handleLogin(userData) {
-    setUser(userData);
+    if (userData.token) setAuthToken(userData.token);
+    setUser({
+      id: userData.id,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+    });
     setActivePage("home");
     setSearchText("");
   }
 
   function handleLogout() {
+    clearAuthToken();
     setUser(null);
     setActivePage("home");
     setSearchText("");
@@ -50,6 +93,10 @@ export default function App() {
       default:
         return <HomePage {...pageProps} />;
     }
+  }
+
+  if (checkingSession) {
+    return <main className="auth-page">Đang kiểm tra phiên đăng nhập...</main>;
   }
 
   if (!user) {
