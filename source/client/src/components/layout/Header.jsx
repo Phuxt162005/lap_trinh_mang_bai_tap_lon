@@ -1,4 +1,6 @@
 export default function Header({ onSearch, userName, onLogout }) {
+  const displayName = (userName || "Người dùng").trim();
+
   return (
     <header className="header">
       <div className="header-title">
@@ -12,7 +14,7 @@ export default function Header({ onSearch, userName, onLogout }) {
           <input
             type="search"
             placeholder="Tìm bài hát, nghệ sĩ, album..."
-            onChange={(event) => onSearch(event.target.value)}
+            onChange={(event) => onSearch?.(event.target.value)}
             aria-label="Tìm kiếm thư viện"
           />
         </label>
@@ -20,10 +22,11 @@ export default function Header({ onSearch, userName, onLogout }) {
         <button
           className="avatar-button"
           type="button"
-          title="Đăng xuất"
+          title={`Đăng xuất tài khoản ${displayName}`}
+          aria-label={`Đăng xuất tài khoản ${displayName}`}
           onClick={onLogout}
         >
-          {(userName || "U").trim().charAt(0).toUpperCase()}
+          {displayName.charAt(0).toUpperCase()}
         </button>
       </div>
     </header>

@@ -1,7 +1,13 @@
 import { useState } from "react";
+import AuthPage from "./components/AuthPage";
 import Sidebar from "./components/layout/Sidebar";
 import Header from "./components/layout/Header";
 import MusicPlayer from "./components/layout/MusicPlayer";
+import HomePage from "./pages/HomePage";
+import SongsPage from "./pages/SongsPage";
+import ArtistsPage from "./pages/ArtistsPage";
+import AlbumsPage from "./pages/AlbumsPage";
+import PlaylistsPage from "./pages/PlaylistPage";
 
 const pageTitles = {
   home: "Trang chủ",
@@ -12,44 +18,66 @@ const pageTitles = {
 };
 
 export default function App() {
+  const [user, setUser] = useState(null);
   const [activePage, setActivePage] = useState("home");
   const [searchText, setSearchText] = useState("");
+
+  function handleLogin(userData) {
+    setUser(userData);
+    setActivePage("home");
+    setSearchText("");
+  }
+
+  function handleLogout() {
+    setUser(null);
+    setActivePage("home");
+    setSearchText("");
+  }
+
+  function renderPage() {
+    const pageProps = { searchText };
+
+    switch (activePage) {
+      case "songs":
+        return <SongsPage {...pageProps} />;
+      case "artists":
+        return <ArtistsPage {...pageProps} />;
+      case "albums":
+        return <AlbumsPage {...pageProps} />;
+      case "playlists":
+        return <PlaylistsPage {...pageProps} />;
+      case "home":
+      default:
+        return <HomePage {...pageProps} />;
+    }
+  }
+
+  if (!user) {
+    return <AuthPage onLogin={handleLogin} />;
+  }
 
   return (
     <div className="app-layout">
       <Sidebar activePage={activePage} onNavigate={setActivePage} />
 
       <div className="main-layout">
-        <Header onSearch={setSearchText} />
+        <Header
+          onSearch={setSearchText}
+          userName={user.name}
+          onLogout={handleLogout}
+        />
 
         <main className="main-content">
           <section className="welcome-section">
             <span className="eyebrow">MUSIC APP</span>
             <h2>{pageTitles[activePage]}</h2>
-            <p>Tìm kiếm, khám phá và quản lý thư viện âm nhạc của bạn.</p>
+            <p>
+              Xin chào {user.name || user.email}. Tìm kiếm và khám phá thư viện
+              âm nhạc của bạn.
+            </p>
           </section>
 
-          <section className="content-section">
-            <div className="section-heading">
-              <div>
-                <h3>{searchText ? "Kết quả tìm kiếm" : "Khám phá âm nhạc"}</h3>
-                <p>
-                  {searchText
-                    ? `Từ khóa: ${searchText}`
-                    : "Nội dung sẽ được bổ sung ở các bước tiếp theo."}
-                </p>
-              </div>
-            </div>
-
-            <div className="empty-state">
-              <div className="empty-icon">♫</div>
-              <h3>Thư viện đang được xây dựng</h3>
-              <p>
-                Chúng ta sẽ bổ sung dữ liệu bài hát, nghệ sĩ, album và playlist
-                sau khi hoàn thiện bố cục.
-              </p>
-            </div>
-          </section>
+          {renderPage()}
         </main>
       </div>
 
