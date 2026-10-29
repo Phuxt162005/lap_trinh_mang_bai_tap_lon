@@ -8,6 +8,8 @@ import SongsPage from "./pages/SongsPage";
 import ArtistsPage from "./pages/ArtistsPage";
 import AlbumsPage from "./pages/AlbumsPage";
 import PlaylistsPage from "./pages/PlaylistPage";
+import AdminPage from "./pages/AdminPage";
+
 import {
   apiRequest,
   getAuthToken,
@@ -21,6 +23,7 @@ const pageTitles = {
   artists: "Nghệ sĩ",
   albums: "Album",
   playlists: "Playlist",
+  admin: "Quản trị thư viện",
 };
 
 export default function App() {
@@ -112,6 +115,12 @@ export default function App() {
     const pageProps = { searchText, onPlaySong: playSong };
 
     switch (activePage) {
+      case "admin":
+        return user.role === "admin" ? (
+          <AdminPage />
+        ) : (
+          <HomePage {...pageProps} />
+        );
       case "songs":
         return <SongsPage {...pageProps} />;
       case "artists":
@@ -136,7 +145,11 @@ export default function App() {
 
   return (
     <div className="app-layout">
-      <Sidebar activePage={activePage} onNavigate={setActivePage} />
+      <Sidebar
+        activePage={activePage}
+        onNavigate={setActivePage}
+        isAdmin={user.role === "admin"}
+      />
 
       <div className="main-layout">
         <Header

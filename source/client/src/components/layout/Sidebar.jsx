@@ -6,7 +6,7 @@ const menus = [
   { id: "playlists", label: "Playlist", icon: "☷" },
 ];
 
-export default function Sidebar({ activePage, onNavigate }) {
+export default function Sidebar({ activePage, onNavigate, isAdmin = false }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -32,6 +32,20 @@ export default function Sidebar({ activePage, onNavigate }) {
               <span>{menu.label}</span>
             </button>
           ))}
+
+          {isAdmin && (
+            <button
+              type="button"
+              className={`nav-item ${activePage === "admin" ? "active" : ""}`}
+              aria-current={activePage === "admin" ? "page" : undefined}
+              onClick={() => onNavigate("admin")}
+            >
+              <span className="nav-icon" aria-hidden="true">
+                ⚙
+              </span>
+              <span>Quản trị</span>
+            </button>
+          )}
         </nav>
       </div>
 
