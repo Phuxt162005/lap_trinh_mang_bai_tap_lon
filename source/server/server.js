@@ -4,6 +4,8 @@ import "dotenv/config";
 import pool from "./config/database.js";
 import authRoutes from "./routes/authRoutes.js";
 import songRoutes from "./routes/songRoutes.js";
+import artistRoutes from "./routes/artistRoutes.js";
+import albumRoutes from "./routes/albumRoutes.js";
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
@@ -31,6 +33,10 @@ app.get("/health", async (req, res, next) => {
 app.use("/api/auth", authRoutes);
 
 app.use("/api/songs", songRoutes);
+
+app.use("/api/artists", artistRoutes);
+
+app.use("/api/albums", albumRoutes);
 
 app.use((req, res) => {
   res.status(404).json({ message: "Không tìm thấy API." });
