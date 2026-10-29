@@ -32,4 +32,38 @@ router.get("/", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/:albumId/songs", requireAuth, async (req, res, next) => {
+  try {
+    const albumId = Number(req.params.albumId);
+    if (!Number.isSafeInteger(albumId) || albumId <= 0) {
+      return res.status(400).json({ message: "ID album không hợp lệ." });
+    }
+
+    const [albums] = await pool.execute(
+      `SELECT al.id, al.title, al.artist_id, al.release_year, al.cover_url,
+              a.name AS artist_name
+       FROM albums al
+       JOIN artists a ON a.id = al.artist_id
+       WHERE al.id = ? LIMIT 1`,
+      [albumId],
+    );
+    if (!albums.length) {
+      return res.status(404).json({ message: "Không tìm thấy album." });
+    }
+
+    const album = albums[0];
+    const [songs] = await pool.execute(
+      `SELECT id, title, artist, album, duration_seconds, audio_url, cover_url
+       FROM songs
+       WHERE album = ? AND artist = ?
+       ORDER BY title ASC, id ASC`,
+      [album.title, album.artist_name],
+    );
+
+    res.json({ album, songs });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

@@ -34,4 +34,32 @@ router.get("/", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/:artistId/songs", requireAuth, async (req, res, next) => {
+  try {
+    const artistId = Number(req.params.artistId);
+    if (!Number.isSafeInteger(artistId) || artistId <= 0) {
+      return res.status(400).json({ message: "ID nghệ sĩ không hợp lệ." });
+    }
+
+    const [artists] = await pool.execute(
+      "SELECT id, name, bio, image_url FROM artists WHERE id = ? LIMIT 1",
+      [artistId],
+    );
+    if (!artists.length) {
+      return res.status(404).json({ message: "Không tìm thấy nghệ sĩ." });
+    }
+
+    const [songs] = await pool.execute(
+      `SELECT id, title, artist, album, duration_seconds, audio_url, cover_url
+       FROM songs WHERE artist = ?
+       ORDER BY title ASC, id ASC`,
+      [artists[0].name],
+    );
+
+    res.json({ artist: artists[0], songs });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

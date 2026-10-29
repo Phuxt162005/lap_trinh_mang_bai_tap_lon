@@ -828,3 +828,67 @@
     flex-direction: column;
   }
 }
+
+.artist-detail-panel {
+  margin-top: 28px;
+  padding: 22px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.artist-detail-panel .section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.artist-detail-panel .section-heading h3 {
+  margin: 0 0 6px;
+}
+
+.artist-detail-panel .section-heading p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.artist-detail-panel .songs-table-wrap {
+  overflow-x: auto;
+}
+
+.artist-detail-panel .songs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.artist-detail-panel .songs-table th,
+.artist-detail-panel .songs-table td {
+  padding: 13px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  font-size: 13px;
+}
+
+.artist-detail-panel .songs-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.artist-detail-panel .songs-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 600px) {
+  .artist-detail-panel {
+    padding: 14px;
+  }
+
+  .artist-detail-panel .songs-table th,
+  .artist-detail-panel .songs-table td {
+    padding: 10px 8px;
+    white-space: nowrap;
+  }
+}
